@@ -48,3 +48,28 @@ class Usuario(models.Model):
 
     def __str__(self):
         return f'{self.nombre} ({self.email})'
+    # ── Propiedades requeridas por DRF y SimpleJWT ─────────────────────────
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+
+    @property
+    def is_active(self):
+        return self.activo
+
+    # ── Propiedades requeridas por DRF y SimpleJWT ─────────────────────────
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+
+    @property
+    def is_active(self):
+        return self.activo

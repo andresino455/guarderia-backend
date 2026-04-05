@@ -141,8 +141,8 @@ class SalaViewSet(viewsets.ModelViewSet):
             }
             for s in salas
         ])
-        
-        
+
+
 @action(detail=False, methods=['get'], url_path='mi-sala')
 def mi_sala(self, request):
     """
@@ -150,7 +150,7 @@ def mi_sala(self, request):
     Devuelve la sala asignada al personal autenticado.
     """
     from apps.usuarios.views import get_tokens_for_user
-    user_id = request.auth.payload.get('user_id')
+    user_id = request.user.id_usuario
 
     vinculo = PersonalSala.objects.filter(
         id_personal__activo=True,

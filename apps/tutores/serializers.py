@@ -39,3 +39,55 @@ class UsuarioTutorSerializer(serializers.ModelSerializer):
             'activo', 'created_at'
         ]
         read_only_fields = ['created_at']
+
+from apps.usuarios.models import Usuario, Rol
+from django.contrib.auth.hashers import make_password
+
+
+class TutorConUsuarioSerializer(serializers.ModelSerializer):
+    """Crea el tutor y su usuario en una sola operación."""
+
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True, min_length=6)
+
+    class Meta:
+        model = Tutor
+        fields = ["nombre", "ci", "telefono", "direccion", "email", "password"]
+
+    def validate_ci(self, value):
+        if Tutor.objects.filter(ci=value, activo=True).exists():
+            raise serializers.ValidationError("Ya existe un tutor con ese CI.")
+        return value
+
+    def validate_email(self, value):
+        if Usuario.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Ya existe un usuario con ese email.")
+        return value
+
+    def create(self, validated_data):
+        email = validated_data.pop("email")
+        password = validated_data.pop("password")
+
+        # 1. Crear el tutor
+        tutor = Tutor.objects.create(**validated_data)
+
+        # 2. Obtener o crear el rol Tutor
+        rol, _ = Rol.objects.get_or_create(nombre="Tutor")
+
+        # 3. Crear el usuario
+        usuario = Usuario.objects.create(
+            nombre=tutor.nombre,
+            email=email,
+            password=make_password(password),
+            id_rol=rol,
+            activo=True,
+        )
+
+        # 4. Vincular usuario ↔ tutor
+        UsuarioTutor.objects.create(
+            id_usuario=usuario,
+            id_tutor=tutor,
+            activo=True,
+        )
+
+        return tutor

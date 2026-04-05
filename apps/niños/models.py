@@ -52,3 +52,27 @@ class TutorNino(models.Model):
 
     def __str__(self):
         return f'{self.id_nino} — {self.id_tutor} ({self.relacion})'
+
+
+class PersonaAutorizada(models.Model):
+    id_persona = models.AutoField(primary_key=True)
+    id_nino = models.ForeignKey(
+        Nino,
+        on_delete=models.CASCADE,
+        db_column="id_nino",
+        related_name="personas_autorizadas",
+    )
+    nombre = models.CharField(max_length=100)
+    ci = models.CharField(max_length=20)
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+    codigo_seguridad = models.CharField(max_length=50)
+    activo = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "persona_autorizada"
+        ordering = ["nombre"]
+
+    def __str__(self):
+        return f"{self.nombre} (CI: {self.ci}) — autorizado para {self.id_nino}"

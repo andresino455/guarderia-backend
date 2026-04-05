@@ -44,7 +44,19 @@ class TutorViewSet(viewsets.ModelViewSet):
             activo=True, nombre__icontains=q
         )[:10]
         return Response(TutorListSerializer(tutores, many=True).data)
-    
+
+    @action(detail=False, methods=["post"], url_path="crear-con-usuario")
+    def crear_con_usuario(self, request):
+        """
+        POST /api/v1/tutores/crear-con-usuario/
+        Crea el tutor, su usuario con rol Tutor y el vínculo automáticamente.
+        """
+        serializer = TutorConUsuarioSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        tutor = serializer.save()
+        return Response(TutorSerializer(tutor).data, status=status.HTTP_201_CREATED)
+
+
 @action(detail=False, methods=['get'], url_path='mi-dashboard')
 def mi_dashboard(self, request):
     """
@@ -61,7 +73,7 @@ def mi_dashboard(self, request):
     from apps.camaras.serializers import CamaraListSerializer
     from django.utils import timezone
 
-    user_id = request.auth.payload.get('user_id')
+    user_id = request.user.id_usuario
 
     # Buscar tutor vinculado al usuario
     try:

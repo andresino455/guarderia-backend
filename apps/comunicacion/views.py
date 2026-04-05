@@ -14,9 +14,9 @@ from .serializers import (
 
 
 def get_usuario_id(request):
-    """Extrae el id_usuario del token JWT."""
-    return request.auth.payload.get('user_id')
+    """Extrae el id_usuario del usuario autenticado."""
 
+    return request.user.id_usuario
 
 class MensajeViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]

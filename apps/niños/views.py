@@ -114,3 +114,87 @@ def dashboard_resumen(request):
         'alertas_salud':  alertas_salud,
         'pagos_grafico':  pagos_grafico,
     })
+
+from .models import PersonaAutorizada
+from .serializers import (
+    PersonaAutorizadaSerializer,
+    PersonaAutorizadaListSerializer,
+    VerificarCodigoSerializer,
+)
+
+
+class PersonaAutorizadaViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = PersonaAutorizada.objects.select_related("id_nino").filter(activo=True)
+        nino = self.request.query_params.get("nino")
+        if nino:
+            qs = qs.filter(id_nino=nino)
+        return qs.order_by("nombre")
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return PersonaAutorizadaListSerializer
+        return PersonaAutorizadaSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        persona = self.get_object()
+        persona.activo = False
+        persona.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=["post"], url_path="verificar")
+    def verificar(self, request):
+        """
+        POST /api/v1/ninos/personas-autorizadas/verificar/
+        Verifica si una persona puede recoger a un niño
+        usando su CI y código de seguridad.
+
+        Body: { "ci": "...", "codigo_seguridad": "..." }
+        """
+        serializer = VerificarCodigoSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        ci = serializer.validated_data["ci"]
+        codigo = serializer.validated_data["codigo_seguridad"]
+
+        try:
+            persona = PersonaAutorizada.objects.select_related("id_nino").get(
+                ci=ci, codigo_seguridad=codigo, activo=True
+            )
+            return Response(
+                {
+                    "autorizado": True,
+                    "nombre": persona.nombre,
+                    "ci": persona.ci,
+                    "telefono": persona.telefono,
+                    "nino": persona.id_nino.nombre,
+                    "id_nino": persona.id_nino.id_nino,
+                }
+            )
+        except PersonaAutorizada.DoesNotExist:
+            return Response(
+                {
+                    "autorizado": False,
+                    "detail": "CI o código de seguridad incorrectos.",
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+    @action(detail=False, methods=["get"], url_path="por-nino")
+    def por_nino(self, request):
+        """
+        GET /api/v1/ninos/personas-autorizadas/por-nino/?nino=<id>
+        Lista todas las personas autorizadas de un niño específico.
+        """
+        nino_id = request.query_params.get("nino")
+        if not nino_id:
+            return Response(
+                {"detail": 'Parámetro "nino" es requerido.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        personas = PersonaAutorizada.objects.filter(
+            id_nino=nino_id, activo=True
+        ).order_by("nombre")
+        return Response(PersonaAutorizadaListSerializer(personas, many=True).data)
