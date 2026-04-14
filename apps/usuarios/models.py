@@ -2,7 +2,6 @@
 from django.db import models
 from django.contrib.auth.hashers import make_password
 
-
 class Rol(models.Model):
     id_rol = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=50)
@@ -73,3 +72,25 @@ class Usuario(models.Model):
     @property
     def is_active(self):
         return self.activo
+
+    # 🔥 DELETE CORRECTO
+    def delete(self, *args, **kwargs):
+        from apps.tutores.models import UsuarioTutor
+        from apps.ninos.models import TutorNino
+
+        relaciones = UsuarioTutor.objects.filter(id_usuario=self)
+
+        for relacion in relaciones:
+            tutor = relacion.id_tutor
+
+            # eliminar relaciones tutor-niño
+            TutorNino.objects.filter(id_tutor=tutor).delete()
+
+            # eliminar relación usuario-tutor
+            relacion.delete()
+
+            # eliminar tutor
+            tutor.delete()
+
+        # eliminar usuario
+        super().delete(*args, **kwargs)

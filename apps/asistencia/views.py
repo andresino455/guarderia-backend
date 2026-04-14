@@ -9,8 +9,7 @@ from .serializers import (
     AsistenciaSerializer, AsistenciaListSerializer,
     CheckInSerializer, CheckOutSerializer
 )
-from apps.niños.models import Nino
-
+from apps.ninos.models import Nino
 
 class AsistenciaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]

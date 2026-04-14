@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import Tutor, UsuarioTutor
-
+from rest_framework.response import Response
 
 class TutorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -68,13 +68,11 @@ class TutorConUsuarioSerializer(serializers.ModelSerializer):
         email = validated_data.pop("email")
         password = validated_data.pop("password")
 
-        # 1. Crear el tutor
-        tutor = Tutor.objects.create(**validated_data)
+        # 🔥 FIX AQUÍ
+        tutor = Tutor.objects.create(email=email, **validated_data)
 
-        # 2. Obtener o crear el rol Tutor
         rol, _ = Rol.objects.get_or_create(nombre="Tutor")
 
-        # 3. Crear el usuario
         usuario = Usuario.objects.create(
             nombre=tutor.nombre,
             email=email,
@@ -83,7 +81,6 @@ class TutorConUsuarioSerializer(serializers.ModelSerializer):
             activo=True,
         )
 
-        # 4. Vincular usuario ↔ tutor
         UsuarioTutor.objects.create(
             id_usuario=usuario,
             id_tutor=tutor,
@@ -91,3 +88,11 @@ class TutorConUsuarioSerializer(serializers.ModelSerializer):
         )
 
         return tutor
+
+    def destroy(self, request, *args, **kwargs):
+        tutor = self.get_object()
+
+        serializer = self.get_serializer()
+        serializer.delete(tutor)
+
+        return Response({"message": "Tutor eliminado PERMANENTEMENTE"}, status=200)

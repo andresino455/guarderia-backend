@@ -25,17 +25,17 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
-    'apps.usuarios',
-    'apps.tutores',
-    'apps.niños',
-    'apps.salas',
-    'apps.servicios',
-    'apps.asistencia',
-    'apps.salud',
-    'apps.actividades',
-    'apps.comunicacion',
-    'apps.camaras',
-    'apps.auditoria',
+    "apps.usuarios",
+    "apps.tutores",
+    "apps.ninos",
+    "apps.salas",
+    "apps.servicios",
+    "apps.asistencia",
+    "apps.salud",
+    "apps.actividades",
+    "apps.comunicacion",
+    "apps.camaras",
+    "apps.auditoria",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -112,3 +112,29 @@ SIMPLE_JWT = {
 
 # CORS (permite peticiones del frontend y app móvil)
 CORS_ALLOW_ALL_ORIGINS = True  # cambiar a False en producción
+
+
+# =========================================================
+# EMAIL - BREVO SMTP
+# =========================================================
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp-relay.brevo.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+
+# En Brevo SMTP normalmente se usa el correo autenticado / remitente como usuario
+EMAIL_HOST_USER = os.getenv("BREVO_SENDER_EMAIL", "danieliporo86@gmail.com")
+EMAIL_HOST_PASSWORD = os.getenv("BREVO_SMTP_KEY", "")
+
+DEFAULT_FROM_EMAIL = f"{os.getenv('BREVO_SENDER_NAME', 'Guarderia UAGRM')} <{os.getenv('BREVO_SENDER_EMAIL', 'danieliporo86@gmail.com')}>"
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+EMAIL_TIMEOUT = 20
+
+# =========================================================
+# BREVO API (por si usas envío mediante SDK/API luego)
+# =========================================================
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
+BREVO_SMTP_KEY = os.getenv("BREVO_SMTP_KEY", "")
+BREVO_SENDER_EMAIL = os.getenv("BREVO_SENDER_EMAIL", "danieliporo86@gmail.com")
+BREVO_SENDER_NAME = os.getenv("BREVO_SENDER_NAME", "Guarderia UAGRM")

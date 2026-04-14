@@ -103,10 +103,9 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         return UsuarioSerializer
 
     def destroy(self, request, *args, **kwargs):
-        # Soft delete
+        # Hard delete: Borra el registro físicamente
         usuario = self.get_object()
-        usuario.activo = False
-        usuario.save()
+        usuario.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])

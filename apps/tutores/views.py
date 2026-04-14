@@ -5,8 +5,12 @@ from rest_framework.response import Response
 
 from apps.usuarios.permissions import IsAdmin, IsAdminOrSelf
 from .models import Tutor, UsuarioTutor
-from .serializers import TutorSerializer, TutorListSerializer, UsuarioTutorSerializer
-
+from .serializers import (
+    TutorSerializer,
+    TutorListSerializer,
+    UsuarioTutorSerializer,
+    TutorConUsuarioSerializer,
+)
 
 class TutorViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -28,8 +32,9 @@ class TutorViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], url_path='ninos')
     def ninos(self, request, pk=None):
         """GET /api/v1/tutores/{id}/ninos/ — niños vinculados al tutor."""
-        from apps.niños.models import TutorNino
-        from apps.niños.serializers import NinoListSerializer
+        from apps.ninos.models import TutorNino
+        from apps.ninos.serializers import NinoListSerializer
+
         vinculos = TutorNino.objects.filter(
             id_tutor=pk, activo=True
         ).select_related('id_nino')
@@ -64,8 +69,8 @@ def mi_dashboard(self, request):
     Dashboard completo para el tutor autenticado.
     """
     from apps.usuarios.models import Usuario
-    from apps.niños.models import TutorNino
-    from apps.niños.serializers import NinoSerializer
+    from apps.ninos.models import TutorNino
+    from apps.ninos.serializers import NinoSerializer
     from apps.asistencia.models import Asistencia
     from apps.servicios.models import Pago
     from apps.comunicacion.models import Notificacion

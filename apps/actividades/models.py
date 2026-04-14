@@ -1,6 +1,5 @@
 from django.db import models
-from apps.niños.models import Nino
-
+from apps.ninos.models import Nino
 
 class Actividad(models.Model):
 

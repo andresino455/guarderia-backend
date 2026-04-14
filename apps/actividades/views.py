@@ -9,8 +9,7 @@ from .models import Actividad
 from .serializers import (
     ActividadSerializer, ActividadListSerializer, ActividadBulkSerializer
 )
-from apps.niños.models import Nino
-
+from apps.ninos.models import Nino
 
 class ActividadViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
