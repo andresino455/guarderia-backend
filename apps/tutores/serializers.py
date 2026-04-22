@@ -2,43 +2,56 @@ from rest_framework import serializers
 from .models import Tutor, UsuarioTutor
 from rest_framework.response import Response
 
+
 class TutorSerializer(serializers.ModelSerializer):
     class Meta:
-        model  = Tutor
+        model = Tutor
         fields = [
-            'id_tutor', 'nombre', 'ci', 'telefono',
-            'direccion', 'email', 'activo', 'created_at', 'updated_at'
+            "id_tutor",
+            "nombre",
+            "ci",
+            "telefono",
+            "direccion",
+            "email",
+            "activo",
+            "created_at",
+            "updated_at",
         ]
-        read_only_fields = ['id_tutor', 'created_at', 'updated_at']
+        read_only_fields = ["id_tutor", "created_at", "updated_at"]
 
     def validate_ci(self, value):
         qs = Tutor.objects.filter(ci=value, activo=True)
         if self.instance:
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
-            raise serializers.ValidationError('Ya existe un tutor con ese CI.')
+            raise serializers.ValidationError("Ya existe un tutor con ese CI.")
         return value
 
 
 class TutorListSerializer(serializers.ModelSerializer):
     """Versión liviana para listados."""
+
     class Meta:
-        model  = Tutor
-        fields = ['id_tutor', 'nombre', 'ci', 'telefono', 'email', 'activo']
+        model = Tutor
+        fields = ["id_tutor", "nombre", "ci", "telefono", "email", "activo"]
 
 
 class UsuarioTutorSerializer(serializers.ModelSerializer):
-    tutor_nombre   = serializers.CharField(source='id_tutor.nombre', read_only=True)
-    usuario_nombre = serializers.CharField(source='id_usuario.nombre', read_only=True)
+    tutor_nombre = serializers.CharField(source="id_tutor.nombre", read_only=True)
+    usuario_nombre = serializers.CharField(source="id_usuario.nombre", read_only=True)
 
     class Meta:
-        model  = UsuarioTutor
+        model = UsuarioTutor
         fields = [
-            'id_usuario', 'usuario_nombre',
-            'id_tutor', 'tutor_nombre',
-            'activo', 'created_at'
+            "id_usuario",
+            "usuario_nombre",
+            "id_tutor",
+            "tutor_nombre",
+            "activo",
+            "created_at",
         ]
-        read_only_fields = ['created_at']
+        read_only_fields = ["created_at"]
+
 
 from apps.usuarios.models import Usuario, Rol
 from django.contrib.auth.hashers import make_password
@@ -68,7 +81,6 @@ class TutorConUsuarioSerializer(serializers.ModelSerializer):
         email = validated_data.pop("email")
         password = validated_data.pop("password")
 
-        # 🔥 FIX AQUÍ
         tutor = Tutor.objects.create(email=email, **validated_data)
 
         rol, _ = Rol.objects.get_or_create(nombre="Tutor")
