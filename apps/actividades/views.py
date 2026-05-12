@@ -10,8 +10,10 @@ from .serializers import (
     ActividadSerializer, ActividadListSerializer, ActividadBulkSerializer
 )
 from apps.ninos.models import Nino
+from apps.guarderias.mixins import GuaderiaMixin
 
-class ActividadViewSet(viewsets.ModelViewSet):
+
+class ActividadViewSet(GuaderiaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
@@ -32,6 +34,8 @@ class ActividadViewSet(viewsets.ModelViewSet):
             qs = qs.filter(fecha__gte=desde)
         if hasta:
             qs = qs.filter(fecha__lte=hasta)
+        if hasattr(self.request, "guarderia") and self.request.guarderia:
+            qs = qs.filter(id_guarderia=self.request.guarderia)
 
         return qs.order_by('-fecha')
 

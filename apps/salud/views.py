@@ -10,18 +10,21 @@ from .serializers import (
     MedicacionSerializer, AlimentacionSerializer
 )
 
+from apps.guarderias.mixins import GuaderiaMixin
 
-class SaludViewSet(viewsets.ModelViewSet):
+class SaludViewSet(GuaderiaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        qs    = Salud.objects.select_related('id_nino').filter(activo=True)
-        nino  = self.request.query_params.get('nino')
-        fecha = self.request.query_params.get('fecha')
+        qs = Salud.objects.select_related("id_nino").filter(activo=True)
+        nino = self.request.query_params.get("nino")
+        fecha = self.request.query_params.get("fecha")
         if nino:
             qs = qs.filter(id_nino=nino)
         if fecha:
             qs = qs.filter(fecha=fecha)
+        if hasattr(self.request, "guarderia") and self.request.guarderia:
+            qs = qs.filter(id_guarderia=self.request.guarderia)
         return qs.order_by('-fecha')
 
     def get_serializer_class(self):
@@ -49,7 +52,7 @@ class SaludViewSet(viewsets.ModelViewSet):
         })
 
 
-class MedicacionViewSet(viewsets.ModelViewSet):
+class MedicacionViewSet(GuaderiaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class   = MedicacionSerializer
 
@@ -58,6 +61,8 @@ class MedicacionViewSet(viewsets.ModelViewSet):
         nino = self.request.query_params.get('nino')
         if nino:
             qs = qs.filter(id_nino=nino)
+        if hasattr(self.request, "guarderia") and self.request.guarderia:
+            qs = qs.filter(id_guarderia=self.request.guarderia)
         return qs.order_by('hora')
 
     def destroy(self, request, *args, **kwargs):
@@ -77,7 +82,7 @@ class MedicacionViewSet(viewsets.ModelViewSet):
         return Response(MedicacionSerializer(proximas, many=True).data)
 
 
-class AlimentacionViewSet(viewsets.ModelViewSet):
+class AlimentacionViewSet(GuaderiaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class   = AlimentacionSerializer
 
@@ -86,6 +91,8 @@ class AlimentacionViewSet(viewsets.ModelViewSet):
         nino = self.request.query_params.get('nino')
         if nino:
             qs = qs.filter(id_nino=nino)
+        if hasattr(self.request, "guarderia") and self.request.guarderia:
+            qs = qs.filter(id_guarderia=self.request.guarderia)
         return qs.order_by('horario')
 
     def destroy(self, request, *args, **kwargs):

@@ -9,6 +9,13 @@ class Nino(models.Model):
     edad             = models.IntegerField(blank=True, null=True)
     foto             = models.TextField(blank=True, null=True)
     info_medica      = models.TextField(blank=True, null=True)
+    id_guarderia = models.ForeignKey(
+        "guarderias.Guarderia",
+        on_delete=models.CASCADE,
+        db_column="id_guarderia",
+        related_name="ninos",
+        null=True,
+    )
     activo           = models.BooleanField(default=True)
     created_at       = models.DateTimeField(auto_now_add=True)
     updated_at       = models.DateTimeField(auto_now=True)
@@ -20,22 +27,22 @@ class Nino(models.Model):
         if self.fecha_nacimiento:
             from django.utils import timezone
             hoy = timezone.now().date()
-        
+
             # 1. Diferencia inicial de años
             edad = hoy.year - self.fecha_nacimiento.year
-        
+
             # 2. Ajuste: Si hoy es antes del cumpleaños de este año, resta 1
             # Creamos una fecha para el cumple de este año
             cumple_este_ano = self.fecha_nacimiento.replace(year=hoy.year)
-        
+
             if hoy < cumple_este_ano:
                 edad -= 1
-            
+
             # 3. Validación de seguridad (mínimo 0 años)
             self.edad = max(0, edad)
-        
+
         super().save(*args, **kwargs)
-    
+
     def __str__(self):
         return self.nombre
 

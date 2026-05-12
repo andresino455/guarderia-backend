@@ -10,9 +10,10 @@ from .serializers import (
     SalaSerializer, SalaListSerializer,
     PersonalSalaSerializer, AsignacionNinoSalaSerializer,
 )
+from apps.guarderias.mixins import GuaderiaMixin
 
 
-class PersonalViewSet(viewsets.ModelViewSet):
+class PersonalViewSet(GuaderiaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
@@ -20,6 +21,13 @@ class PersonalViewSet(viewsets.ModelViewSet):
         tipo = self.request.query_params.get('tipo')
         if tipo:
             qs = qs.filter(tipo=tipo)
+        return qs
+
+    def get_queryset(self):
+        # Llamar al mixin primero para filtrar por guardería
+        qs = Personal.objects.filter(activo=True)
+        if hasattr(self.request, "guarderia") and self.request.guarderia:
+            qs = qs.filter(id_guarderia=self.request.guarderia)
         return qs
 
     def get_serializer_class(self):
@@ -42,11 +50,15 @@ class PersonalViewSet(viewsets.ModelViewSet):
         return Response(PersonalSalaSerializer(vinculos, many=True).data)
 
 
-class SalaViewSet(viewsets.ModelViewSet):
+class SalaViewSet(GuaderiaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Sala.objects.filter(activo=True)
+        # Llamar al mixin primero para filtrar por guardería
+        qs = Sala.objects.filter(activo=True)
+        if hasattr(self.request, "guarderia") and self.request.guarderia:
+            qs = qs.filter(id_guarderia=self.request.guarderia)
+        return qs
 
     def get_serializer_class(self):
         if self.action == 'list':

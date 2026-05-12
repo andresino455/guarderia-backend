@@ -20,6 +20,13 @@ class Actividad(models.Model):
     tipo         = models.CharField(max_length=50, choices=TIPO_CHOICES)
     descripcion  = models.TextField()
     fecha        = models.DateField()
+    id_guarderia = models.ForeignKey(
+        "guarderias.Guarderia",
+        on_delete=models.CASCADE,
+        db_column="id_guarderia",
+        related_name="actividades",
+        null=True,
+    )
     activo       = models.BooleanField(default=True)
     created_at   = models.DateTimeField(auto_now_add=True)
     updated_at   = models.DateTimeField(auto_now=True)

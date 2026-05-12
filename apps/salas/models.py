@@ -16,6 +16,13 @@ class Personal(models.Model):
     nombre      = models.CharField(max_length=100)
     telefono    = models.CharField(max_length=20, blank=True, null=True)
     tipo        = models.CharField(max_length=50, choices=TIPO_CHOICES, default='maestra')
+    id_guarderia = models.ForeignKey(
+        "guarderias.Guarderia",
+        on_delete=models.CASCADE,
+        db_column="id_guarderia",
+        related_name="personal",
+        null=True,
+    )
     activo      = models.BooleanField(default=True)
     created_at  = models.DateTimeField(auto_now_add=True)
     updated_at  = models.DateTimeField(auto_now=True)
@@ -34,6 +41,13 @@ class Sala(models.Model):
     edad_min  = models.IntegerField()
     edad_max  = models.IntegerField()
     cupo_max  = models.IntegerField()
+    id_guarderia = models.ForeignKey(
+        "guarderias.Guarderia",
+        on_delete=models.CASCADE,
+        db_column="id_guarderia",
+        related_name="salas",
+        null=True,
+    )
     activo    = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

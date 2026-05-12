@@ -6,6 +6,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+
 from apps.servicios.brevo_service import BrevoEmailService
 from .models import Nino, TutorNino, PersonaAutorizada, RetiroNino
 from .serializers import (
@@ -18,7 +19,7 @@ from .serializers import (
     RegistrarRetiroSerializer,
     RetiroNinoSerializer,
 )
-
+from apps.guarderias.mixins import GuaderiaMixin
 
 def enviar_codigo_a_tutores(nino, nombre_persona_autorizada, codigo_seguridad):
     vinculos = TutorNino.objects.select_related("id_tutor").filter(
@@ -165,11 +166,15 @@ def enviar_retiro_a_tutores(nino, persona, retiro):
     }
 
 
-class NinoViewSet(viewsets.ModelViewSet):
+class NinoViewSet(GuaderiaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Nino.objects.filter(activo=True).order_by("nombre")
+        # Llamar al mixin primero para filtrar por guardería
+        qs = Nino.objects.filter(activo=True).order_by("nombre")
+        if hasattr(self.request, "guarderia") and self.request.guarderia:
+            qs = qs.filter(id_guarderia=self.request.guarderia)
+        return qs
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -384,9 +389,8 @@ from .serializers import (
 )
 
 
-class PersonaAutorizadaViewSet(viewsets.ModelViewSet):
+class PersonaAutorizadaViewSet(GuaderiaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -421,11 +425,14 @@ class PersonaAutorizadaViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_201_CREATED,
         )
+
     def get_queryset(self):
         qs = PersonaAutorizada.objects.select_related("id_nino").filter(activo=True)
         nino = self.request.query_params.get("nino")
         if nino:
             qs = qs.filter(id_nino=nino)
+        if hasattr(self.request, "guarderia") and self.request.guarderia:
+            qs = qs.filter(id_guarderia=self.request.guarderia)
         return qs.order_by("nombre")
 
     def get_serializer_class(self):
@@ -493,6 +500,3 @@ class PersonaAutorizadaViewSet(viewsets.ModelViewSet):
             id_nino=nino_id, activo=True
         ).order_by("nombre")
         return Response(PersonaAutorizadaListSerializer(personas, many=True).data)
-
-
-

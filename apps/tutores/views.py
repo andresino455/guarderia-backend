@@ -11,12 +11,18 @@ from .serializers import (
     UsuarioTutorSerializer,
     TutorConUsuarioSerializer,
 )
+from apps.guarderias.mixins import GuaderiaMixin
 
-class TutorViewSet(viewsets.ModelViewSet):
+
+class TutorViewSet(GuaderiaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Tutor.objects.filter(activo=True).order_by('nombre')
+        # Llamar al mixin primero para filtrar por guardería
+        qs = Tutor.objects.filter(activo=True).order_by("nombre")
+        if hasattr(self.request, "guarderia") and self.request.guarderia:
+            qs = qs.filter(id_guarderia=self.request.guarderia)
+        return qs
 
     def get_serializer_class(self):
         if self.action == 'list':

@@ -20,6 +20,13 @@ class Asistencia(models.Model):
     estado        = models.CharField(
         max_length=50, choices=ESTADO_CHOICES, default='presente'
     )
+    id_guarderia = models.ForeignKey(
+        "guarderias.Guarderia",
+        on_delete=models.CASCADE,
+        db_column="id_guarderia",
+        related_name="asistencias",
+        null=True,
+    )
     activo        = models.BooleanField(default=True)
     created_at    = models.DateTimeField(auto_now_add=True)
     updated_at    = models.DateTimeField(auto_now=True)

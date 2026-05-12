@@ -8,11 +8,13 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import Rol, Usuario
 from .serializers import (
-    RolSerializer, UsuarioSerializer,
-    UsuarioListSerializer, CambiarPasswordSerializer, LoginSerializer
+    RolSerializer,
+    UsuarioSerializer,
+    UsuarioListSerializer,
+    CambiarPasswordSerializer,
+    LoginSerializer,
 )
 from .permissions import IsAdmin, IsAdminOrSelf
-
 
 # ─── Utilidad ────────────────────────────────────────────────────────────────
 
@@ -21,10 +23,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 def get_tokens_for_user(usuario):
     refresh = RefreshToken()
-    refresh['user_id'] = usuario.id_usuario
+    refresh["user_id"] = usuario.id_usuario
     refresh["email"] = usuario.email
     refresh["nombre"] = usuario.nombre
     refresh["rol"] = usuario.id_rol.nombre if usuario.id_rol else None
+    refresh["id_guarderia"] = usuario.id_guarderia_id
     return {
         "refresh": str(refresh),
         "access": str(refresh.access_token),
@@ -33,8 +36,10 @@ def get_tokens_for_user(usuario):
 
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 
+
 class LoginView(generics.GenericAPIView):
     """POST /api/v1/auth/login/  →  { access, refresh, usuario }"""
+
     permission_classes = [AllowAny]
     serializer_class = LoginSerializer
 
@@ -42,37 +47,48 @@ class LoginView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        email = serializer.validated_data['email']
-        password = serializer.validated_data['password']
+        email = serializer.validated_data["email"]
+        password = serializer.validated_data["password"]
 
         try:
-            usuario = Usuario.objects.select_related('id_rol').get(
+            usuario = Usuario.objects.select_related("id_rol").get(
                 email=email, activo=True
             )
         except Usuario.DoesNotExist:
             return Response(
-                {'detail': 'Credenciales inválidas.'},
-                status=status.HTTP_401_UNAUTHORIZED
+                {"detail": "Credenciales inválidas."},
+                status=status.HTTP_401_UNAUTHORIZED,
             )
 
         if not check_password(password, usuario.password):
             return Response(
-                {'detail': 'Credenciales inválidas.'},
-                status=status.HTTP_401_UNAUTHORIZED
+                {"detail": "Credenciales inválidas."},
+                status=status.HTTP_401_UNAUTHORIZED,
             )
 
         tokens = get_tokens_for_user(usuario)
-        return Response({
-            **tokens,
-            'usuario': UsuarioListSerializer(usuario).data
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                **tokens,
+                "usuario": UsuarioListSerializer(usuario).data,
+                "guarderia": {
+                    "id_guarderia": usuario.id_guarderia_id,
+                    "nombre": (
+                        usuario.id_guarderia.nombre if usuario.id_guarderia else None
+                    ),
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 # ─── Roles ────────────────────────────────────────────────────────────────────
 
+
 class RolViewSet(viewsets.ModelViewSet):
     """CRUD completo de roles. Solo admin."""
-    queryset = Rol.objects.filter(activo=True).order_by('nombre')
+
+    queryset = Rol.objects.filter(activo=True).order_by("nombre")
     serializer_class = RolSerializer
     permission_classes = [IsAuthenticated, IsAdmin]
 
@@ -86,19 +102,21 @@ class RolViewSet(viewsets.ModelViewSet):
 
 # ─── Usuarios ─────────────────────────────────────────────────────────────────
 
+
 class UsuarioViewSet(viewsets.ModelViewSet):
     """CRUD de usuarios con acciones adicionales."""
-    queryset = Usuario.objects.select_related('id_rol').filter(activo=True)
+
+    queryset = Usuario.objects.select_related("id_rol").filter(activo=True)
     permission_classes = [IsAuthenticated, IsAdminOrSelf]
 
     def get_permissions(self):
         # Permitir crear usuario sin token (solo para setup inicial)
-        if self.action == 'create':
+        if self.action == "create":
             return [AllowAny()]
         return [IsAuthenticated(), IsAdminOrSelf()]
 
     def get_serializer_class(self):
-        if self.action == 'list':
+        if self.action == "list":
             return UsuarioListSerializer
         return UsuarioSerializer
 
@@ -108,27 +126,27 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         usuario.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def me(self, request):
         """GET /api/v1/usuarios/me/ — perfil del usuario autenticado."""
         return Response(UsuarioListSerializer(request.user).data)
 
-    @action(detail=True, methods=['post'], url_path='cambiar-password')
+    @action(detail=True, methods=["post"], url_path="cambiar-password")
     def cambiar_password(self, request, pk=None):
         usuario = self.get_object()
         serializer = CambiarPasswordSerializer(
             data=request.data, context={"request": request, "user_obj": usuario}
         )
-        serializer.context['request'].user_obj = usuario
+        serializer.context["request"].user_obj = usuario
         serializer.is_valid(raise_exception=True)
-        usuario.password = serializer.validated_data['password_nueva']
+        usuario.password = serializer.validated_data["password_nueva"]
         usuario.save()
-        return Response({'detail': 'Contraseña actualizada correctamente.'})
+        return Response({"detail": "Contraseña actualizada correctamente."})
 
-    @action(detail=True, methods=['patch'], url_path='activar')
+    @action(detail=True, methods=["patch"], url_path="activar")
     def activar(self, request, pk=None):
         """PATCH /api/v1/usuarios/{id}/activar/  →  reactiva un usuario."""
         usuario = self.get_object()
         usuario.activo = True
         usuario.save()
-        return Response({'detail': 'Usuario activado.'})
+        return Response({"detail": "Usuario activado."})

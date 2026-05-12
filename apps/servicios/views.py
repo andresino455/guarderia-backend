@@ -12,16 +12,18 @@ from .serializers import (
     NinoServicioSerializer,
     PagoSerializer, PagoListSerializer,
 )
+from apps.guarderias.mixins import GuaderiaMixin
 
-
-class ServicioViewSet(viewsets.ModelViewSet):
+class ServicioViewSet(GuaderiaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        qs   = Servicio.objects.filter(activo=True)
-        tipo = self.request.query_params.get('tipo')
+        qs = Servicio.objects.filter(activo=True)
+        tipo = self.request.query_params.get("tipo")
         if tipo:
             qs = qs.filter(tipo=tipo)
+        if hasattr(self.request, "guarderia") and self.request.guarderia:
+            qs = qs.filter(id_guarderia=self.request.guarderia)
         return qs
 
     def get_serializer_class(self):
@@ -89,7 +91,7 @@ class ServicioViewSet(viewsets.ModelViewSet):
             )
 
 
-class PagoViewSet(viewsets.ModelViewSet):
+class PagoViewSet(GuaderiaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
@@ -107,6 +109,8 @@ class PagoViewSet(viewsets.ModelViewSet):
             qs = qs.filter(fecha__month=mes)
         if anio:
             qs = qs.filter(fecha__year=anio)
+        if hasattr(self.request, "guarderia") and self.request.guarderia:
+            qs = qs.filter(id_guarderia=self.request.guarderia)
 
         return qs.order_by('-fecha')
 

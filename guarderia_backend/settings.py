@@ -44,6 +44,7 @@ LOCAL_APPS = [
     "apps.comunicacion",
     "apps.camaras",
     "apps.auditoria",
+    "apps.guarderias",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -58,6 +59,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.guarderias.middleware.GuarderiaMiddleware",
 ]
 
 ROOT_URLCONF = 'guarderia_backend.urls'

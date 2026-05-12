@@ -1,10 +1,19 @@
 # apps/usuarios/models.py
 from django.db import models
 from django.contrib.auth.hashers import make_password
+from apps.guarderias.models import Guarderia
 
 class Rol(models.Model):
     id_rol = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=50)
+    id_guarderia = models.ForeignKey(
+        Guarderia,
+        on_delete=models.CASCADE,
+        db_column="id_guarderia",
+        related_name="roles",
+        null=True,
+        blank=True,  # null para roles globales del sistema
+    )
     activo = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -29,6 +38,14 @@ class Usuario(models.Model):
         null=True,
         db_column='id_rol',
         related_name='usuarios'
+    )
+    id_guarderia = models.ForeignKey(
+        Guarderia,
+        on_delete=models.CASCADE,
+        db_column="id_guarderia",
+        related_name="usuarios",
+        null=True,
+        blank=True,
     )
     activo = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

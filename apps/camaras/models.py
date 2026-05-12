@@ -9,6 +9,13 @@ class Camara(models.Model):
         db_column='id_sala', related_name='camaras'
     )
     url_stream = models.TextField()
+    id_guarderia = models.ForeignKey(
+        "guarderias.Guarderia",
+        on_delete=models.CASCADE,
+        db_column="id_guarderia",
+        related_name="camaras",
+        null=True,
+    )
     activo     = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -16,6 +16,13 @@ class Servicio(models.Model):
     descripcion  = models.TextField(blank=True, null=True)
     precio       = models.DecimalField(max_digits=10, decimal_places=2)
     tipo         = models.CharField(max_length=50, choices=TIPO_CHOICES, default='mensual')
+    id_guarderia = models.ForeignKey(
+        "guarderias.Guarderia",
+        on_delete=models.CASCADE,
+        db_column="id_guarderia",
+        related_name="servicios",
+        null=True,
+    )
     activo       = models.BooleanField(default=True)
     created_at   = models.DateTimeField(auto_now_add=True)
     updated_at   = models.DateTimeField(auto_now=True)
@@ -66,6 +73,13 @@ class Pago(models.Model):
     total      = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     estado     = models.CharField(
         max_length=50, choices=ESTADO_CHOICES, default='pendiente'
+    )
+    id_guarderia = models.ForeignKey(
+        "guarderias.Guarderia",
+        on_delete=models.CASCADE,
+        db_column="id_guarderia",
+        related_name="pagos",
+        null=True,
     )
     activo     = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

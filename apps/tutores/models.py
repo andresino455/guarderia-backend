@@ -9,6 +9,13 @@ class Tutor(models.Model):
     telefono    = models.CharField(max_length=20)
     direccion   = models.TextField(blank=True, null=True)
     email       = models.CharField(max_length=100, blank=True, null=True)
+    id_guarderia = models.ForeignKey(
+        "guarderias.Guarderia",
+        on_delete=models.CASCADE,
+        db_column="id_guarderia",
+        related_name="tutores",
+        null=True,
+    )
     activo      = models.BooleanField(default=True)
     created_at  = models.DateTimeField(auto_now_add=True)
     updated_at  = models.DateTimeField(auto_now=True)

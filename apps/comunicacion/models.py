@@ -14,27 +14,43 @@ class Mensaje(models.Model):
     )
     mensaje     = models.TextField()
     fecha       = models.DateTimeField(auto_now_add=True)
-    activo      = models.BooleanField(default=True)
-    created_at  = models.DateTimeField(auto_now_add=True)
-    updated_at  = models.DateTimeField(auto_now=True)
+    id_guarderia = models.ForeignKey(
+        "guarderias.Guarderia",
+        on_delete=models.CASCADE,
+        db_column="id_guarderia",
+        related_name="mensajes",
+        null=True,
+    )
+    activo = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'mensaje'
-        ordering = ['-fecha']
+        db_table = "mensaje"
+        ordering = ["-fecha"]
 
     def __str__(self):
-        return f'{self.id_emisor} → {self.id_receptor} ({self.fecha})'
+        return f"{self.id_emisor} → {self.id_receptor} ({self.fecha})"
 
 
 class Notificacion(models.Model):
     id_notificacion = models.AutoField(primary_key=True)
-    id_usuario      = models.ForeignKey(
-        Usuario, on_delete=models.CASCADE,
-        db_column='id_usuario', related_name='notificaciones'
+    id_usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        db_column="id_usuario",
+        related_name="notificaciones",
     )
-    mensaje         = models.TextField()
-    fecha           = models.DateTimeField(auto_now_add=True)
-    leido           = models.BooleanField(default=False)
+    mensaje = models.TextField()
+    fecha = models.DateTimeField(auto_now_add=True)
+    leido = models.BooleanField(default=False)
+    id_guarderia = models.ForeignKey(
+        "guarderias.Guarderia",
+        on_delete=models.CASCADE,
+        db_column="id_guarderia",
+        related_name="notificaciones",
+        null=True,
+    )
     activo          = models.BooleanField(default=True)
     created_at      = models.DateTimeField(auto_now_add=True)
     updated_at      = models.DateTimeField(auto_now=True)

@@ -10,8 +10,10 @@ from .serializers import (
     CheckInSerializer, CheckOutSerializer
 )
 from apps.ninos.models import Nino
+from apps.guarderias.mixins import GuaderiaMixin
 
-class AsistenciaViewSet(viewsets.ModelViewSet):
+
+class AsistenciaViewSet(GuaderiaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
@@ -28,6 +30,8 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
             qs = qs.filter(id_nino=nino)
         if estado:
             qs = qs.filter(estado=estado)
+        if hasattr(self.request, "guarderia") and self.request.guarderia:
+            qs = qs.filter(id_guarderia=self.request.guarderia)
 
         return qs.order_by('-fecha', 'id_nino__nombre')
 

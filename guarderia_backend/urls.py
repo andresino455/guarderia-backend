@@ -19,4 +19,5 @@ urlpatterns = [
     path("api/v1/actividades/", include("apps.actividades.urls")),
     path("api/v1/comunicacion/", include("apps.comunicacion.urls")),
     path("api/v1/camaras/", include("apps.camaras.urls")),
+    path("api/v1/guarderias/", include("apps.guarderias.urls")),
 ]

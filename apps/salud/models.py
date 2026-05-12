@@ -10,6 +10,13 @@ class Salud(models.Model):
     fecha         = models.DateField()
     sintomas      = models.TextField(blank=True, null=True)
     observaciones = models.TextField(blank=True, null=True)
+    id_guarderia = models.ForeignKey(
+        "guarderias.Guarderia",
+        on_delete=models.CASCADE,
+        db_column="id_guarderia",
+        related_name="salud",
+        null=True,
+    )
     activo        = models.BooleanField(default=True)
     created_at    = models.DateTimeField(auto_now_add=True)
     updated_at    = models.DateTimeField(auto_now=True)
@@ -31,6 +38,13 @@ class Medicacion(models.Model):
     medicamento   = models.CharField(max_length=100)
     dosis         = models.CharField(max_length=50)
     hora          = models.TimeField()
+    id_guarderia = models.ForeignKey(
+        "guarderias.Guarderia",
+        on_delete=models.CASCADE,
+        db_column="id_guarderia",
+        related_name="medicacion",
+        null=True,
+    )
     activo        = models.BooleanField(default=True)
     created_at    = models.DateTimeField(auto_now_add=True)
     updated_at    = models.DateTimeField(auto_now=True)
@@ -51,6 +65,13 @@ class Alimentacion(models.Model):
     tipo_comida     = models.CharField(max_length=100)
     horario         = models.TimeField()
     observaciones   = models.TextField(blank=True, null=True)
+    id_guarderia = models.ForeignKey(
+        "guarderias.Guarderia",
+        on_delete=models.CASCADE,
+        db_column="id_guarderia",
+        related_name="alimentacion",
+        null=True,
+    )
     activo          = models.BooleanField(default=True)
     created_at      = models.DateTimeField(auto_now_add=True)
     updated_at      = models.DateTimeField(auto_now=True)
