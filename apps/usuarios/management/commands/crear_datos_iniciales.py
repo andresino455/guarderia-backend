@@ -1,6 +1,4 @@
 from django.core.management.base import BaseCommand
-from django.contrib.auth.hashers import make_password
-
 
 class Command(BaseCommand):
     help = "Crea guardería, roles y admin inicial"
@@ -9,7 +7,6 @@ class Command(BaseCommand):
         import os
         from apps.guarderias.models import Guarderia
         from apps.usuarios.models import Rol, Usuario
-        from django.contrib.auth.hashers import make_password
 
         # 1. Crear guardería inicial
         guarderia_nombre = os.getenv("GUARDERIA_NOMBRE", "Guardería Principal")
@@ -21,7 +18,7 @@ class Command(BaseCommand):
                 self.style.SUCCESS(f"Guardería creada: {guarderia_nombre}")
             )
 
-        # 2. Crear roles vinculados a la guardería
+        # 2. Crear roles
         roles_iniciales = ["Administrador", "Personal", "Tutor"]
         for nombre in roles_iniciales:
             Rol.objects.get_or_create(
@@ -36,12 +33,24 @@ class Command(BaseCommand):
 
         if not Usuario.objects.filter(email=admin_email).exists():
             rol_admin = Rol.objects.get(nombre="Administrador", id_guarderia=guarderia)
-            Usuario.objects.create(
+
+            # ← NO uses make_password aquí, el save() del modelo ya lo hace
+            usuario = Usuario(
                 nombre=admin_nombre,
                 email=admin_email,
-                password=make_password(admin_password),
+                password=admin_password,  # ← contraseña plana, save() la hashea
                 id_rol=rol_admin,
                 id_guarderia=guarderia,
                 activo=True,
             )
+            usuario.save()
+
             self.stdout.write(self.style.SUCCESS(f"Admin creado: {admin_email}"))
+        else:
+            # Si ya existe, corregir la contraseña
+            usuario = Usuario.objects.get(email=admin_email)
+            usuario.password = admin_password  # plana, save() la hashea
+            usuario.save()
+            self.stdout.write(
+                self.style.WARNING(f"Contraseña del admin reseteada: {admin_email}")
+            )
