@@ -37,9 +37,10 @@ def get_tokens_for_user(usuario):
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 
 
-class LoginView(generics.GenericAPIView):
-    """POST /api/v1/auth/login/  →  { access, refresh, usuario }"""
+from django.core.cache import cache
+from django.utils import timezone
 
+class LoginView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     serializer_class = LoginSerializer
 
@@ -50,21 +51,56 @@ class LoginView(generics.GenericAPIView):
         email = serializer.validated_data["email"]
         password = serializer.validated_data["password"]
 
+        # ── Claves de cache ───────────────────────────────────────
+        cache_intentos = f"login_intentos_{email}"
+        cache_bloqueado = f"login_bloqueado_{email}"
+
+        # ── Verificar si está bloqueado ───────────────────────────
+        bloqueado_hasta = cache.get(cache_bloqueado)
+        if bloqueado_hasta:
+            segundos_restantes = int(bloqueado_hasta - timezone.now().timestamp())
+            if segundos_restantes > 0:
+                minutos = segundos_restantes // 60
+                segundos = segundos_restantes % 60
+                return Response(
+                    {
+                        "detail": f"Cuenta bloqueada por demasiados intentos fallidos. "
+                        f"Intentá de nuevo en {minutos}m {segundos}s.",
+                        "bloqueado": True,
+                        "segundos_restantes": segundos_restantes,
+                    },
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+            else:
+                # El bloqueo expiró, limpiar
+                cache.delete(cache_bloqueado)
+                cache.delete(cache_intentos)
+
+        # ── Verificar credenciales ────────────────────────────────
         try:
             usuario = Usuario.objects.select_related("id_rol").get(
                 email=email, activo=True
             )
         except Usuario.DoesNotExist:
+            # No revelar si el usuario existe o no
+            self._registrar_intento_fallido(cache_intentos, cache_bloqueado, email)
+            intentos = cache.get(cache_intentos, 0)
             return Response(
-                {"detail": "Credenciales inválidas."},
+                self._respuesta_fallida(intentos),
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
         if not check_password(password, usuario.password):
+            self._registrar_intento_fallido(cache_intentos, cache_bloqueado, email)
+            intentos = cache.get(cache_intentos, 0)
             return Response(
-                {"detail": "Credenciales inválidas."},
+                self._respuesta_fallida(intentos),
                 status=status.HTTP_401_UNAUTHORIZED,
             )
+
+        # ── Login exitoso → limpiar intentos ─────────────────────
+        cache.delete(cache_intentos)
+        cache.delete(cache_bloqueado)
 
         tokens = get_tokens_for_user(usuario)
         return Response(
@@ -80,6 +116,30 @@ class LoginView(generics.GenericAPIView):
             },
             status=status.HTTP_200_OK,
         )
+
+    def _registrar_intento_fallido(self, cache_intentos, cache_bloqueado, email):
+        intentos = cache.get(cache_intentos, 0) + 1
+        cache.set(cache_intentos, intentos, timeout=300)  # 5 min
+
+        if intentos >= 3:
+            # Guardar timestamp de cuando expira el bloqueo
+            expira = timezone.now().timestamp() + 300  # 5 min
+            cache.set(cache_bloqueado, expira, timeout=300)
+            cache.delete(cache_intentos)
+
+    def _respuesta_fallida(self, intentos):
+        restantes = max(0, 3 - intentos)
+        if intentos >= 3:
+            return {
+                "detail": "Cuenta bloqueada por 5 minutos por demasiados intentos fallidos.",
+                "bloqueado": True,
+                "segundos_restantes": 300,
+            }
+        return {
+            "detail": f"Credenciales inválidas. Te quedan {restantes} intento{'s' if restantes != 1 else ''}.",
+            "bloqueado": False,
+            "intentos_restantes": restantes,
+        }
 
 
 # ─── Roles ────────────────────────────────────────────────────────────────────
