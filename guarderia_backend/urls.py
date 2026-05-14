@@ -21,3 +21,32 @@ urlpatterns = [
     path("api/v1/camaras/", include("apps.camaras.urls")),
     path("api/v1/guarderias/", include("apps.guarderias.urls")),
 ]
+
+from django.http import JsonResponse
+from django.contrib.auth.hashers import check_password
+
+
+def debug_usuario(request):
+    from apps.usuarios.models import Usuario
+
+    email = request.GET.get("email", "admin@guarderia.com")
+    u = Usuario.objects.filter(email=email).first()
+    if not u:
+        return JsonResponse({"error": "Usuario no encontrado"})
+    return JsonResponse(
+        {
+            "encontrado": True,
+            "nombre": u.nombre,
+            "email": u.email,
+            "activo": u.activo,
+            "password_empieza_con": u.password[:20],
+            "rol": u.id_rol.nombre if u.id_rol else None,
+            "guarderia": u.id_guarderia_id,
+            "check_Admin1234": check_password("Admin1234!", u.password),
+        }
+    )
+
+
+urlpatterns += [
+    path("debug-usuario/", debug_usuario),
+]
