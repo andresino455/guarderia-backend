@@ -21,6 +21,7 @@ urlpatterns = [
     path("api/v1/camaras/", include("apps.camaras.urls")),
     path("api/v1/guarderias/", include("apps.guarderias.urls")),
     path("api/v1/auditoria/", include("apps.auditoria.urls")),
+    path("api/v1/backup/", include("apps.backup.urls")),
 ]
 
 from django.http import JsonResponse
