@@ -28,11 +28,28 @@ from django.contrib.auth.hashers import check_password
 
 def debug_usuario(request):
     from apps.usuarios.models import Usuario
+    from django.contrib.auth.hashers import check_password, make_password
+    from apps.guarderias.models import Guarderia
 
     email = request.GET.get("email", "admin@guarderia.com")
+    resetear = request.GET.get("reset", "false") == "true"
+
     u = Usuario.objects.filter(email=email).first()
     if not u:
         return JsonResponse({"error": "Usuario no encontrado"})
+
+    if resetear:
+        # Obtener la primera guardería disponible
+        guarderia = Guarderia.objects.filter(activo=True).first()
+
+        # Usar update() para bypassear el save() del modelo
+        Usuario.objects.filter(email=email).update(
+            password=make_password("Admin1234!"),
+            id_guarderia=guarderia,
+            activo=True,
+        )
+        u.refresh_from_db()
+
     return JsonResponse(
         {
             "encontrado": True,
