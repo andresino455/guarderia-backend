@@ -6,4 +6,3 @@ python manage.py collectstatic --no-input
 python manage.py migrate
 python manage.py crear_datos_iniciales
 python manage.py reset_admin 
-python manage.py createcachetable
