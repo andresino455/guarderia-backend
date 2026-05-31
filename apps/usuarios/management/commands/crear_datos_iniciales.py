@@ -38,7 +38,7 @@ class Command(BaseCommand):
             usuario = Usuario(
                 nombre=admin_nombre,
                 email=admin_email,
-                password=admin_password,  # ← contraseña plana, save() la hashea
+                password=admin_password,
                 id_rol=rol_admin,
                 id_guarderia=guarderia,
                 activo=True,
