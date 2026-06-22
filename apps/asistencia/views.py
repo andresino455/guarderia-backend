@@ -3,8 +3,6 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.utils import timezone
-from django.utils import timezone
-import datetime
 
 from .models import Asistencia
 from .serializers import (
@@ -22,8 +20,8 @@ class AsistenciaViewSet(GuaderiaMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = Asistencia.objects.select_related("id_nino").filter(activo=True)
+        qs = self.filtrar_por_guarderia(qs)
 
-        # Filtros por query params
         fecha = self.request.query_params.get("fecha")
         nino = self.request.query_params.get("nino")
         estado = self.request.query_params.get("estado")
@@ -34,15 +32,13 @@ class AsistenciaViewSet(GuaderiaMixin, viewsets.ModelViewSet):
             qs = qs.filter(id_nino=nino)
         if estado:
             qs = qs.filter(estado=estado)
-        if hasattr(self.request, "guarderia") and self.request.guarderia:
-            qs = qs.filter(id_guarderia=self.request.guarderia)
 
         return qs.order_by("-fecha", "id_nino__nombre")
 
     def get_serializer_class(self):
-        if self.action == "list":
-            return AsistenciaListSerializer
-        return AsistenciaSerializer
+        return (
+            AsistenciaListSerializer if self.action == "list" else AsistenciaSerializer
+        )
 
     def destroy(self, request, *args, **kwargs):
         asistencia = self.get_object()
@@ -53,10 +49,9 @@ class AsistenciaViewSet(GuaderiaMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="hoy")
     def hoy(self, request):
         hoy = timezone.localtime(timezone.now()).date()
-        guarderia = getattr(request, "guarderia", None)
+        guarderia = self.get_guarderia()
 
         qs = Asistencia.objects.select_related("id_nino").filter(fecha=hoy, activo=True)
-
         if guarderia:
             qs = qs.filter(id_guarderia=guarderia)
 
@@ -91,7 +86,7 @@ class AsistenciaViewSet(GuaderiaMixin, viewsets.ModelViewSet):
         hora = timezone.localtime(timezone.now()).time()
         id_nino = serializer.validated_data["id_nino"]
         estado = serializer.validated_data["estado"]
-        guarderia = getattr(request, "guarderia", None)
+        guarderia = self.get_guarderia()
 
         asistencia, created = Asistencia.objects.get_or_create(
             id_nino_id=id_nino,
@@ -116,7 +111,6 @@ class AsistenciaViewSet(GuaderiaMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=["patch"], url_path="checkout")
     def checkout(self, request, pk=None):
-        """PATCH /api/v1/asistencia/{id}/checkout/ — registrar salida."""
         asistencia = self.get_object()
         serializer = CheckOutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -133,11 +127,13 @@ class AsistenciaViewSet(GuaderiaMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="reporte")
     def reporte(self, request):
-        """GET /api/v1/asistencia/reporte/?desde=YYYY-MM-DD&hasta=YYYY-MM-DD"""
         desde = request.query_params.get("desde")
         hasta = request.query_params.get("hasta")
+        guarderia = self.get_guarderia()
 
         qs = Asistencia.objects.filter(activo=True)
+        if guarderia:
+            qs = qs.filter(id_guarderia=guarderia)
         if desde:
             qs = qs.filter(fecha__gte=desde)
         if hasta:

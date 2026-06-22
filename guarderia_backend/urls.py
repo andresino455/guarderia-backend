@@ -22,6 +22,7 @@ urlpatterns = [
     path("api/v1/guarderias/", include("apps.guarderias.urls")),
     path("api/v1/auditoria/", include("apps.auditoria.urls")),
     path("api/v1/backup/", include("apps.backup.urls")),
+    path("api/v1/reportes/", include("apps.reportes.urls")),
 ]
 
 from django.http import JsonResponse
@@ -65,7 +66,34 @@ def debug_usuario(request):
         }
     )
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def debug_tenant(request):
+    """
+    GET /api/v1/debug-tenant/
+    Muestra qué guardería tiene el request actual.
+    Eliminar en producción.
+    """
+    guarderia = getattr(request, "guarderia", None)
+    usuario = getattr(request, "user", None)
+
+    return Response(
+        {
+            "usuario_id": getattr(usuario, "id_usuario", None),
+            "usuario_email": getattr(usuario, "email", None),
+            "usuario_guarderia_id": getattr(usuario, "id_guarderia_id", None),
+            "request_guarderia": str(guarderia) if guarderia else None,
+            "request_guarderia_id": guarderia.id_guarderia if guarderia else None,
+        }
+    )
+
 
 urlpatterns += [
     path("debug-usuario/", debug_usuario),
+    path("api/v1/debug-tenant/", debug_tenant),
 ]

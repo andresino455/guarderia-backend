@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Tutor, UsuarioTutor
-from rest_framework.response import Response
+from apps.usuarios.models import Usuario, Rol
+from django.contrib.auth.hashers import make_password
 
 
 class TutorSerializer(serializers.ModelSerializer):
@@ -29,8 +30,6 @@ class TutorSerializer(serializers.ModelSerializer):
 
 
 class TutorListSerializer(serializers.ModelSerializer):
-    """Versión liviana para listados."""
-
     class Meta:
         model = Tutor
         fields = ["id_tutor", "nombre", "ci", "telefono", "email", "activo"]
@@ -51,10 +50,6 @@ class UsuarioTutorSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["created_at"]
-
-
-from apps.usuarios.models import Usuario, Rol
-from django.contrib.auth.hashers import make_password
 
 
 class TutorConUsuarioSerializer(serializers.ModelSerializer):
@@ -80,16 +75,26 @@ class TutorConUsuarioSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         email = validated_data.pop("email")
         password = validated_data.pop("password")
+        guarderia = self.context.get("guarderia")
 
-        tutor = Tutor.objects.create(email=email, **validated_data)
+        # Crear tutor con la guardería del contexto
+        tutor = Tutor.objects.create(
+            email=email,
+            id_guarderia=guarderia,
+            **validated_data,
+        )
 
-        rol, _ = Rol.objects.get_or_create(nombre="Tutor")
+        # Buscar rol Tutor de esta guardería
+        rol = Rol.objects.filter(nombre="Tutor", id_guarderia=guarderia).first()
+        if not rol:
+            rol = Rol.objects.filter(nombre="Tutor").first()
 
         usuario = Usuario.objects.create(
             nombre=tutor.nombre,
             email=email,
             password=make_password(password),
             id_rol=rol,
+            id_guarderia=guarderia,
             activo=True,
         )
 
@@ -100,11 +105,3 @@ class TutorConUsuarioSerializer(serializers.ModelSerializer):
         )
 
         return tutor
-
-    def destroy(self, request, *args, **kwargs):
-        tutor = self.get_object()
-
-        serializer = self.get_serializer()
-        serializer.delete(tutor)
-
-        return Response({"message": "Tutor eliminado PERMANENTEMENTE"}, status=200)

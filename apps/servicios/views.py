@@ -3,9 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.utils import timezone
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count
 
-from apps.usuarios.permissions import IsAdmin
 from .models import Servicio, NinoServicio, Pago, DetallePago
 from .serializers import (
     ServicioSerializer,
@@ -22,17 +21,16 @@ class ServicioViewSet(GuaderiaMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = Servicio.objects.filter(activo=True)
+        qs = self.filtrar_por_guarderia(qs)
+
         tipo = self.request.query_params.get("tipo")
         if tipo:
             qs = qs.filter(tipo=tipo)
-        if hasattr(self.request, "guarderia") and self.request.guarderia:
-            qs = qs.filter(id_guarderia=self.request.guarderia)
+
         return qs
 
     def get_serializer_class(self):
-        if self.action == "list":
-            return ServicioListSerializer
-        return ServicioSerializer
+        return ServicioListSerializer if self.action == "list" else ServicioSerializer
 
     def destroy(self, request, *args, **kwargs):
         servicio = self.get_object()
@@ -42,7 +40,6 @@ class ServicioViewSet(GuaderiaMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"], url_path="ninos")
     def ninos(self, request, pk=None):
-        """GET /api/v1/servicios/{id}/ninos/ — niños con este servicio."""
         vinculos = NinoServicio.objects.filter(
             id_servicio=pk, activo=True
         ).select_related("id_nino")
@@ -50,7 +47,6 @@ class ServicioViewSet(GuaderiaMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="asignar")
     def asignar(self, request):
-        """POST /api/v1/servicios/asignar/ — asignar servicio a un niño."""
         id_nino = request.data.get("id_nino")
         id_servicio = request.data.get("id_servicio")
 
@@ -61,7 +57,9 @@ class ServicioViewSet(GuaderiaMixin, viewsets.ModelViewSet):
             )
 
         vinculo, created = NinoServicio.objects.get_or_create(
-            id_nino_id=id_nino, id_servicio_id=id_servicio, defaults={"activo": True}
+            id_nino_id=id_nino,
+            id_servicio_id=id_servicio,
+            defaults={"activo": True},
         )
         if not created:
             vinculo.activo = True
@@ -74,7 +72,6 @@ class ServicioViewSet(GuaderiaMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=["delete"], url_path="desasignar")
     def desasignar(self, request):
-        """DELETE /api/v1/servicios/desasignar/ — quitar servicio a un niño."""
         id_nino = request.data.get("id_nino")
         id_servicio = request.data.get("id_servicio")
 
@@ -87,18 +84,19 @@ class ServicioViewSet(GuaderiaMixin, viewsets.ModelViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except NinoServicio.DoesNotExist:
             return Response(
-                {"detail": "Vínculo no encontrado."}, status=status.HTTP_404_NOT_FOUND
+                {"detail": "Vínculo no encontrado."},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
     @action(detail=False, methods=["get"], url_path="por-nino")
     def por_nino(self, request):
-        """GET /api/v1/servicios/servicios/por-nino/?nino=<id>"""
         nino_id = request.query_params.get("nino")
         if not nino_id:
             return Response(
                 {"detail": "Parámetro nino es requerido."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
         vinculos = NinoServicio.objects.filter(
             id_nino=nino_id, activo=True
         ).select_related("id_servicio")
@@ -121,6 +119,8 @@ class PagoViewSet(GuaderiaMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = Pago.objects.select_related("id_nino").filter(activo=True)
+        qs = self.filtrar_por_guarderia(qs)
+
         nino = self.request.query_params.get("nino")
         estado = self.request.query_params.get("estado")
         mes = self.request.query_params.get("mes")
@@ -134,15 +134,11 @@ class PagoViewSet(GuaderiaMixin, viewsets.ModelViewSet):
             qs = qs.filter(fecha__month=mes)
         if anio:
             qs = qs.filter(fecha__year=anio)
-        if hasattr(self.request, "guarderia") and self.request.guarderia:
-            qs = qs.filter(id_guarderia=self.request.guarderia)
 
         return qs.order_by("-fecha")
 
     def get_serializer_class(self):
-        if self.action == "list":
-            return PagoListSerializer
-        return PagoSerializer
+        return PagoListSerializer if self.action == "list" else PagoSerializer
 
     def destroy(self, request, *args, **kwargs):
         pago = self.get_object()
@@ -153,7 +149,6 @@ class PagoViewSet(GuaderiaMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=["patch"], url_path="marcar-pagado")
     def marcar_pagado(self, request, pk=None):
-        """PATCH /api/v1/pagos/{id}/marcar-pagado/"""
         pago = self.get_object()
         if pago.estado == "pagado":
             return Response(
@@ -166,12 +161,14 @@ class PagoViewSet(GuaderiaMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="resumen")
     def resumen(self, request):
-        """GET /api/v1/pagos/resumen/?mes=M&anio=YYYY"""
         hoy = timezone.now().date()
         mes = int(request.query_params.get("mes", hoy.month))
         anio = int(request.query_params.get("anio", hoy.year))
+        guarderia = self.get_guarderia()
 
         qs = Pago.objects.filter(fecha__month=mes, fecha__year=anio, activo=True)
+        if guarderia:
+            qs = qs.filter(id_guarderia=guarderia)
 
         total_pagado = qs.filter(estado="pagado").aggregate(s=Sum("total"))["s"] or 0
 
@@ -188,21 +185,19 @@ class PagoViewSet(GuaderiaMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="generar-mensual")
     def generar_mensual(self, request):
-        """
-        POST /api/v1/pagos/generar-mensual/
-        Genera pagos pendientes para todos los niños activos
-        con sus servicios mensuales asignados.
-        """
         hoy = timezone.now().date()
         mes = request.data.get("mes", hoy.month)
         anio = request.data.get("anio", hoy.year)
+        guarderia = self.get_guarderia()
 
         from apps.ninos.models import Nino
 
-        ninos = Nino.objects.filter(activo=True)
-        creados = 0
+        ninos_qs = Nino.objects.filter(activo=True)
+        if guarderia:
+            ninos_qs = ninos_qs.filter(id_guarderia=guarderia)
 
-        for nino in ninos:
+        creados = 0
+        for nino in ninos_qs:
             servicios_mensuales = NinoServicio.objects.filter(
                 id_nino=nino,
                 activo=True,
@@ -213,16 +208,22 @@ class PagoViewSet(GuaderiaMixin, viewsets.ModelViewSet):
             if not servicios_mensuales.exists():
                 continue
 
-            # Evitar duplicado del mes
             ya_existe = Pago.objects.filter(
-                id_nino=nino, fecha__month=mes, fecha__year=anio, activo=True
+                id_nino=nino,
+                fecha__month=mes,
+                fecha__year=anio,
+                activo=True,
             ).exists()
             if ya_existe:
                 continue
 
             total = sum(ns.id_servicio.precio for ns in servicios_mensuales)
             pago = Pago.objects.create(
-                id_nino=nino, fecha=hoy, total=total, estado="pendiente"
+                id_nino=nino,
+                fecha=hoy,
+                total=total,
+                estado="pendiente",
+                id_guarderia=guarderia,
             )
             for ns in servicios_mensuales:
                 DetallePago.objects.create(

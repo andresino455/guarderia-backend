@@ -1,56 +1,59 @@
 from django.core.management.base import BaseCommand
 
+
 class Command(BaseCommand):
-    help = "Crea guardería, roles y admin inicial"
+    help = "Crea guardería inicial, roles y admin — solo para setup inicial"
 
     def handle(self, *args, **options):
         import os
         from apps.guarderias.models import Guarderia
         from apps.usuarios.models import Rol, Usuario
 
-        # 1. Crear guardería inicial
         guarderia_nombre = os.getenv("GUARDERIA_NOMBRE", "Guardería Principal")
+
         guarderia, g_created = Guarderia.objects.get_or_create(
-            nombre=guarderia_nombre, defaults={"activo": True}
+            nombre=guarderia_nombre,
+            defaults={"activo": True},
         )
         if g_created:
             self.stdout.write(
                 self.style.SUCCESS(f"Guardería creada: {guarderia_nombre}")
             )
+        else:
+            self.stdout.write(f"Guardería ya existe: {guarderia_nombre}")
 
-        # 2. Crear roles
+        # Roles asociados a esta guardería
         roles_iniciales = ["Administrador", "Personal", "Tutor"]
         for nombre in roles_iniciales:
-            Rol.objects.get_or_create(
-                nombre=nombre, id_guarderia=guarderia, defaults={"activo": True}
+            _, created = Rol.objects.get_or_create(
+                nombre=nombre,
+                id_guarderia=guarderia,
+                defaults={"activo": True},
             )
-        self.stdout.write(self.style.SUCCESS("Roles creados."))
+            if created:
+                self.stdout.write(f"  Rol creado: {nombre}")
 
-        # 3. Crear admin
+        # Admin inicial
         admin_email = os.getenv("ADMIN_EMAIL", "admin@guarderia.com")
         admin_password = os.getenv("ADMIN_PASSWORD", "Admin1234!")
         admin_nombre = os.getenv("ADMIN_NOMBRE", "Administrador")
 
-        if not Usuario.objects.filter(email=admin_email).exists():
-            rol_admin = Rol.objects.get(nombre="Administrador", id_guarderia=guarderia)
+        rol_admin = Rol.objects.get(nombre="Administrador", id_guarderia=guarderia)
 
-            # ← NO uses make_password aquí, el save() del modelo ya lo hace
+        if not Usuario.objects.filter(email=admin_email).exists():
             usuario = Usuario(
                 nombre=admin_nombre,
                 email=admin_email,
-                password=admin_password,
+                password=admin_password,  # save() lo hashea
                 id_rol=rol_admin,
                 id_guarderia=guarderia,
                 activo=True,
             )
             usuario.save()
-
             self.stdout.write(self.style.SUCCESS(f"Admin creado: {admin_email}"))
         else:
-            # Si ya existe, corregir la contraseña
             usuario = Usuario.objects.get(email=admin_email)
-            usuario.password = admin_password  # plana, save() la hashea
+            usuario.password = admin_password
+            usuario.id_guarderia = guarderia
             usuario.save()
-            self.stdout.write(
-                self.style.WARNING(f"Contraseña del admin reseteada: {admin_email}")
-            )
+            self.stdout.write(self.style.WARNING(f"Admin actualizado: {admin_email}"))

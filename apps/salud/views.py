@@ -6,31 +6,33 @@ from django.utils import timezone
 
 from .models import Salud, Medicacion, Alimentacion
 from .serializers import (
-    SaludSerializer, SaludListSerializer,
-    MedicacionSerializer, AlimentacionSerializer
+    SaludSerializer,
+    SaludListSerializer,
+    MedicacionSerializer,
+    AlimentacionSerializer,
 )
-
 from apps.guarderias.mixins import GuaderiaMixin
+
 
 class SaludViewSet(GuaderiaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         qs = Salud.objects.select_related("id_nino").filter(activo=True)
+        qs = self.filtrar_por_guarderia(qs)
+
         nino = self.request.query_params.get("nino")
         fecha = self.request.query_params.get("fecha")
+
         if nino:
             qs = qs.filter(id_nino=nino)
         if fecha:
             qs = qs.filter(fecha=fecha)
-        if hasattr(self.request, "guarderia") and self.request.guarderia:
-            qs = qs.filter(id_guarderia=self.request.guarderia)
-        return qs.order_by('-fecha')
+
+        return qs.order_by("-fecha")
 
     def get_serializer_class(self):
-        if self.action == 'list':
-            return SaludListSerializer
-        return SaludSerializer
+        return SaludListSerializer if self.action == "list" else SaludSerializer
 
     def destroy(self, request, *args, **kwargs):
         registro = self.get_object()
@@ -38,32 +40,37 @@ class SaludViewSet(GuaderiaMixin, viewsets.ModelViewSet):
         registro.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=False, methods=['get'], url_path='alertas-hoy')
+    @action(detail=False, methods=["get"], url_path="alertas-hoy")
     def alertas_hoy(self, request):
-        """GET /api/v1/salud/alertas-hoy/ — registros del día actual."""
-        hoy      = timezone.now().date()
-        alertas  = Salud.objects.select_related('id_nino').filter(
-            fecha=hoy, activo=True
+        hoy = timezone.now().date()
+        guarderia = self.get_guarderia()
+
+        qs = Salud.objects.select_related("id_nino").filter(fecha=hoy, activo=True)
+        if guarderia:
+            qs = qs.filter(id_guarderia=guarderia)
+
+        return Response(
+            {
+                "fecha": str(hoy),
+                "total": qs.count(),
+                "alertas": SaludListSerializer(qs, many=True).data,
+            }
         )
-        return Response({
-            'fecha':   str(hoy),
-            'total':   alertas.count(),
-            'alertas': SaludListSerializer(alertas, many=True).data,
-        })
 
 
 class MedicacionViewSet(GuaderiaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    serializer_class   = MedicacionSerializer
+    serializer_class = MedicacionSerializer
 
     def get_queryset(self):
-        qs   = Medicacion.objects.select_related('id_nino').filter(activo=True)
-        nino = self.request.query_params.get('nino')
+        qs = Medicacion.objects.select_related("id_nino").filter(activo=True)
+        qs = self.filtrar_por_guarderia(qs)
+
+        nino = self.request.query_params.get("nino")
         if nino:
             qs = qs.filter(id_nino=nino)
-        if hasattr(self.request, "guarderia") and self.request.guarderia:
-            qs = qs.filter(id_guarderia=self.request.guarderia)
-        return qs.order_by('hora')
+
+        return qs.order_by("hora")
 
     def destroy(self, request, *args, **kwargs):
         med = self.get_object()
@@ -71,29 +78,33 @@ class MedicacionViewSet(GuaderiaMixin, viewsets.ModelViewSet):
         med.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=False, methods=['get'], url_path='hoy')
+    @action(detail=False, methods=["get"], url_path="hoy")
     def hoy(self, request):
-        """GET /api/v1/medicacion/hoy/ — medicaciones programadas para hoy."""
-        from django.utils import timezone
         hora_actual = timezone.now().time()
-        proximas    = Medicacion.objects.select_related('id_nino').filter(
+        guarderia = self.get_guarderia()
+
+        qs = Medicacion.objects.select_related("id_nino").filter(
             activo=True, hora__gte=hora_actual
-        ).order_by('hora')
-        return Response(MedicacionSerializer(proximas, many=True).data)
+        )
+        if guarderia:
+            qs = qs.filter(id_guarderia=guarderia)
+
+        return Response(MedicacionSerializer(qs.order_by("hora"), many=True).data)
 
 
 class AlimentacionViewSet(GuaderiaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    serializer_class   = AlimentacionSerializer
+    serializer_class = AlimentacionSerializer
 
     def get_queryset(self):
-        qs   = Alimentacion.objects.select_related('id_nino').filter(activo=True)
-        nino = self.request.query_params.get('nino')
+        qs = Alimentacion.objects.select_related("id_nino").filter(activo=True)
+        qs = self.filtrar_por_guarderia(qs)
+
+        nino = self.request.query_params.get("nino")
         if nino:
             qs = qs.filter(id_nino=nino)
-        if hasattr(self.request, "guarderia") and self.request.guarderia:
-            qs = qs.filter(id_guarderia=self.request.guarderia)
-        return qs.order_by('horario')
+
+        return qs.order_by("horario")
 
     def destroy(self, request, *args, **kwargs):
         alim = self.get_object()
