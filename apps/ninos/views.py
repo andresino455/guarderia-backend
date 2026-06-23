@@ -331,12 +331,16 @@ class PersonaAutorizadaViewSet(GuaderiaMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = PersonaAutorizada.objects.select_related("id_nino").filter(activo=True)
-        qs = self.filtrar_por_guarderia(
-            qs.filter(id_nino__id_guarderia=self.get_guarderia())
-        )
+
+        # SOLUCIÓN: Quitamos self.filtrar_por_guarderia(...)
+        guarderia_id = self.get_guarderia()
+        if guarderia_id:
+            qs = qs.filter(id_nino__id_guarderia=guarderia_id)
+
         nino = self.request.query_params.get("nino")
         if nino:
             qs = qs.filter(id_nino=nino)
+
         return qs.order_by("nombre")
 
     def get_serializer_class(self):
